@@ -1,0 +1,21 @@
+{
+  "name": "boids",
+  "version": "0.0.1",
+  "description": "Boids",
+  "main": "index.html",
+  "scripts": {
+    "watch": "node ./node_modules/jest/bin/jest.js --watch",
+    "clearCache": "node ./node_modules/jest/bin/jest.js --clearCache",
+    "test": "node ./node_modules/jest/bin/jest.js",
+    "start": "parcel index.html"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^25.2.1",
+    "jest": "^25.4.0",
+    "prettier": "2.0.5",
+    "ts-jest": "^25.4.0",
+    "typescript": "^3.8.3"
+  }
+}
