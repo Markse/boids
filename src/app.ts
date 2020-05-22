@@ -56,6 +56,8 @@ class BoidScene extends Phaser.Scene {
       this.boids.push(boid);
       this.boidViews.push(new BoidView(this, boid));
     }
+
+    this.cameras.main.setBackgroundColor("0xFFFFFF");
   }
 }
 
