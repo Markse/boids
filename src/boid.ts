@@ -22,20 +22,41 @@ const Vector = {
       y: magnitude * Math.sin(angle),
     };
   },
+
+  /**
+   * Returns the difference between two angles [0, PI]
+   *
+   * @param angle1 First angle
+   * @param angle2 Second angle
+   * @returns Difference between angle1 and angle2
+   */
+  angleDiff(angle1: number, angle2: number): number {
+    let diff = angle1 - angle2;
+
+    // Compensate for 2PI jumps.
+    if (diff > Math.PI) {
+      diff -= Math.PI * 2;
+    } else if (diff < -Math.PI) {
+      diff += Math.PI * 2;
+    }
+
+    return Math.abs(diff);
+  },
 };
 
 export class Boid {
   static sightRadius: number = 70;
-  static sightAngle: number = Math.PI / 2;
+  static sightAngle: number = Math.PI * (5 / 4);
   static repelRadius: number = 30;
   static maxSpeed: number = 0.2;
+  static minSpeed: number = 0.05;
 
   static areaWidth = 800;
   static areaHeight = 600;
 
-  static centerWeight: number = 0.0005;
-  static alignmentWeight: number = 0.05;
-  static separationWeight: number = 0.1;
+  static centerWeight: number = 0.001;
+  static alignmentWeight: number = 0.005;
+  static separationWeight: number = 0.03;
 
   x: number;
   y: number;
@@ -60,6 +81,7 @@ export class Boid {
     }
 
     this.speed = Math.min(this.speed, Boid.maxSpeed);
+    this.speed = Math.max(this.speed, Boid.minSpeed);
 
     const direction = this.getDirection();
     this.x += time * direction.x;
@@ -95,12 +117,24 @@ export class Boid {
     this.angle = Vector.angle(direction);
   }
 
+  inAngle(b: Boid, angleLimit: number): boolean {
+    const relativePosition = { x: b.x - this.x, y: b.y - this.y };
+    const relativeAngle = Vector.angle(relativePosition);
+
+    const diff = Vector.angleDiff(this.angle, relativeAngle);
+
+    return b !== this && diff <= angleLimit / 2;
+  }
+
   inRadius(b: Boid, r: number): boolean {
     return b !== this && Vector.distance(this, b) <= r;
   }
 
   getVisibleBoids(boids: Boid[]): Boid[] {
-    return boids.filter((b) => this.inRadius(b, Boid.sightRadius));
+    return boids.filter(
+      (b) =>
+        this.inRadius(b, Boid.sightRadius) && this.inAngle(b, Boid.sightAngle)
+    );
   }
 
   findCenter(boids: Boid[]): Vector {
@@ -134,8 +168,8 @@ export class Boid {
       closeBoids.forEach((b) => {
         const dist = Vector.distance(this, b);
 
-        direction.x += (this.x - b.x) / (dist);
-        direction.y += (this.y - b.y) / (dist);
+        direction.x += (this.x - b.x) / dist;
+        direction.y += (this.y - b.y) / dist;
       });
 
       direction.x = direction.x / closeBoids.length;

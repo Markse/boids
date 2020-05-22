@@ -7,6 +7,21 @@ describe("Boid", () => {
   let boid: Boid;
 
   beforeEach(() => {
+    // Reset default values
+    Boid.sightRadius = 70;
+    Boid.sightAngle = Math.PI;
+    Boid.repelRadius = 30;
+    Boid.maxSpeed = 0.2;
+    Boid.minSpeed = 0.05;
+
+    Boid.areaWidth = 800;
+    Boid.areaHeight = 600;
+
+    Boid.centerWeight = 0.0005;
+    Boid.alignmentWeight = 0.05;
+    Boid.separationWeight = 0.1;
+
+    // Generic test boid
     boid = new Boid(10, 20);
   });
 
@@ -67,6 +82,19 @@ describe("Boid", () => {
     boid.update(0, []);
     expect(boid.speed).toBe(5);
   });
+
+  test("limits speed to MinSpeed", () => {
+    Boid.minSpeed = 0;
+    boid.speed = 0;
+    boid.update(0, []);
+
+    expect(boid.speed).toBe(0);
+
+    Boid.minSpeed = 1;
+    boid.update(0, []);
+
+    expect(boid.speed).toBe(1);
+  });
   describe("neighbor functions", () => {
     let b1: Boid;
     let b2: Boid;
@@ -88,24 +116,26 @@ describe("Boid", () => {
       expect(visibleBoids).toContain(b3);
     });
 
-    test.skip("sees only within a given angle", () => {
+    test("sees only within a given angle", () => {
       Boid.sightAngle = Math.PI / 2;
       Boid.sightRadius = 10;
       boid.angle = Math.PI / 2;
       boid.speed = 1;
 
-      const bIn1 = new Boid(14.9, 24.9);
-      const bOut1 = new Boid(15.1, 25.1);
+      const bIn1 = new Boid(14.9, 25.1);
+      const bOut1 = new Boid(15.1, 24.9);
 
-      const bIn2 = new Boid(5.1, 15.1);
-      const bOut2 = new Boid(4.9, 14.9);
+      const bIn2 = new Boid(5.1, 25.1);
+      const bOut2 = new Boid(4.9, 24.9);
 
       const visibleBoids = boid.getVisibleBoids([b1, bIn1, bIn2, bOut1, bOut2]);
 
-      expect(visibleBoids.length).toBe(3);
       expect(visibleBoids).toContain(b1);
       expect(visibleBoids).toContain(bIn1);
       expect(visibleBoids).toContain(bIn2);
+      expect(visibleBoids).not.toContain(bOut1);
+      expect(visibleBoids).not.toContain(bOut2);
+      expect(visibleBoids.length).toBe(3);
     });
 
     test.skip("sees beyond the borders of the area", () => {
@@ -133,6 +163,7 @@ describe("Boid", () => {
       boid.findCenter = jest.fn((x) => ({ x: 1, y: 1 }));
       boid.avoidBoids = jest.fn((x) => ({ x: 2, y: 2 }));
       boid.alignAngles = jest.fn((x) => ({ x: 3, y: 3 }));
+      Boid.sightRadius = 100;
       Boid.centerWeight = 1;
       Boid.separationWeight = 2;
       Boid.alignmentWeight = 3;
