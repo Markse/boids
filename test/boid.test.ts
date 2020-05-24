@@ -9,7 +9,7 @@ describe("Boid", () => {
   beforeEach(() => {
     // Reset default values
     Boid.sightRadius = 70;
-    Boid.sightAngle = Math.PI;
+    Boid.sightAngle = Math.PI * 2;
     Boid.repelRadius = 30;
     Boid.maxSpeed = 0.2;
     Boid.minSpeed = 0.05;
@@ -138,18 +138,50 @@ describe("Boid", () => {
       expect(visibleBoids.length).toBe(3);
     });
 
-    test.skip("sees beyond the borders of the area", () => {
-      Boid.sightRadius = 10;
-      Boid.areaHeight = 100;
-      Boid.areaWidth = 200;
-      const b4 = new Boid(1, 1);
-      boid.x = 199;
-      boid.y = 99;
+    describe("border wrapping", () => {
+      let b4: Boid;
+      let b5: Boid;
+      let b6: Boid;
 
-      expect(boid.getVisibleBoids([b4])).toEqual([b4]);
-      expect(b4.getVisibleBoids([boid])).toEqual([boid]);
+      beforeEach(() => {
+        Boid.sightRadius = 10;
+        Boid.areaHeight = 100;
+        Boid.areaWidth = 200;
+        b4 = new Boid(199, 1);
+        b5 = new Boid(1, 99);
+        b6 = new Boid(1, 1);
+        boid.x = 199;
+        boid.y = 99;
+      });
+
+      test("sees beyond the borders of the area", () => {
+        expect(boid.getVisibleBoids([b4, b5, b6])).toEqual([b4, b5, b6]);
+        expect(b4.getVisibleBoids([boid, b5, b6])).toEqual([boid, b5, b6]);
+
+        Boid.sightAngle = Math.PI / 2;
+        boid.angle = 0;
+        expect(boid.getVisibleBoids([b4, b5, b6])).toEqual([b5, b6]);
+        b5.angle = -Math.PI;
+        expect(b5.getVisibleBoids([boid, b4, b6])).toEqual([boid, b4]);
+      });
+
+      test("find center beyond borders", () => {
+        expect(boid.findCenter([b4, b5, b6])).toEqual({
+          x: (199 + 201 + 201) / 3 - 199,
+          y: (99 + 101 + 101) / 3 - 99,
+        });
+
+        expect(b6.findCenter([boid, b4, b5])).toEqual({
+          x: (1 - 1 - 1) / 3 - 1,
+          y: (1 - 1 - 1) / 3 - 1,
+        });
+      });
+
+      test("avoids boids beyond borders", () => {
+        expect(boid.avoidBoids([b4])).toEqual({ x: 0, y: -1 });
+        expect(boid.avoidBoids([b5])).toEqual({ x: -1, y: 0 });
+      });
     });
-    test.todo("steers to points beyond the borders of the area");
 
     test("does not see itself", () => {
       expect(boid.getVisibleBoids([boid])).toEqual([]);

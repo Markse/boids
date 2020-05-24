@@ -22,27 +22,43 @@ const Vector = {
       y: magnitude * Math.sin(angle),
     };
   },
-
-  /**
-   * Returns the difference between two angles [0, PI]
-   *
-   * @param angle1 First angle
-   * @param angle2 Second angle
-   * @returns Difference between angle1 and angle2
-   */
-  angleDiff(angle1: number, angle2: number): number {
-    let diff = angle1 - angle2;
-
-    // Compensate for 2PI jumps.
-    if (diff > Math.PI) {
-      diff -= Math.PI * 2;
-    } else if (diff < -Math.PI) {
-      diff += Math.PI * 2;
-    }
-
-    return Math.abs(diff);
-  },
 };
+
+/**
+ * Returns the distance between two points on a wrapped axis
+ *
+ * @param {number} p1 First point
+ * @param {number} p2 Second point
+ * @param {number} axisLenght Lenght of the axis
+ * @returns {number}
+ */
+function wrappedDistance(p1: number, p2: number, axisLenght: number): number {
+  let diff = p1 - p2;
+
+  if (diff > axisLenght / 2) {
+    diff -= axisLenght;
+  } else if (diff < -axisLenght / 2) {
+    diff += axisLenght;
+  }
+
+  return Math.abs(diff);
+}
+
+function closestWrappedPoint(
+  from: number,
+  to: number,
+  axisLenght: number
+): number {
+  const diff = from - to;
+
+  if (diff > axisLenght / 2) {
+    return to + axisLenght;
+  } else if (diff < -axisLenght / 2) {
+    return to - axisLenght;
+  } else {
+    return to;
+  }
+}
 
 export class Boid {
   static sightRadius: number = 70;
@@ -118,16 +134,28 @@ export class Boid {
   }
 
   inAngle(b: Boid, angleLimit: number): boolean {
-    const relativePosition = { x: b.x - this.x, y: b.y - this.y };
+    const relativePosition = {
+      x: closestWrappedPoint(this.x, b.x, Boid.areaWidth) - this.x,
+      y: closestWrappedPoint(this.y, b.y, Boid.areaHeight) - this.y,
+    };
     const relativeAngle = Vector.angle(relativePosition);
 
-    const diff = Vector.angleDiff(this.angle, relativeAngle);
+    const diff = wrappedDistance(this.angle, relativeAngle, Math.PI * 2);
 
     return b !== this && diff <= angleLimit / 2;
   }
 
+  distanceTo(b: Boid): number {
+    const v = {
+      x: wrappedDistance(this.x, b.x, Boid.areaWidth),
+      y: wrappedDistance(this.y, b.y, Boid.areaHeight),
+    };
+
+    return Vector.magnitude(v);
+  }
+
   inRadius(b: Boid, r: number): boolean {
-    return b !== this && Vector.distance(this, b) <= r;
+    return b !== this && this.distanceTo(b) <= r;
   }
 
   getVisibleBoids(boids: Boid[]): Boid[] {
@@ -141,8 +169,8 @@ export class Boid {
     const center = { x: 0, y: 0 };
 
     boids.forEach((b) => {
-      center.x += b.x;
-      center.y += b.y;
+      center.x += closestWrappedPoint(this.x, b.x, Boid.areaWidth);
+      center.y += closestWrappedPoint(this.y, b.y, Boid.areaHeight);
     });
 
     center.x = center.x / boids.length - this.x;
@@ -166,10 +194,12 @@ export class Boid {
 
     if (closeBoids.length > 0) {
       closeBoids.forEach((b) => {
-        const dist = Vector.distance(this, b);
+        const dist = this.distanceTo(b);
 
-        direction.x += (this.x - b.x) / dist;
-        direction.y += (this.y - b.y) / dist;
+        const x = closestWrappedPoint(this.x, b.x, Boid.areaWidth);
+        const y = closestWrappedPoint(this.y, b.y, Boid.areaHeight);
+        direction.x += (this.x - x) / dist;
+        direction.y += (this.y - y) / dist;
       });
 
       direction.x = direction.x / closeBoids.length;
